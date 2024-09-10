@@ -313,7 +313,7 @@ class UnknownRegionParser:
                     self.stats[col][fail] = 0
         return td
     
-    def parse_fastq_alignment(self, fastq_file, progress_read_count=100000, read_cutoff=None):
+    def parse_fastq_alignment(self, fastq_file, progress_read_count=100000, reorient_reads=True, read_cutoff=None):
         """
         Parses a FASTQ file and extracts sequences from unknown regions using alignment.
 
@@ -326,6 +326,8 @@ class UnknownRegionParser:
             progress_read_count (int, optional):  The number of reads 
                 processed before printing a progress message. 
                 Default: 100000.
+            reorient_reads (bool, optional): If True (default),
+                reorient and reindex reads to start at the start of the construct sequence (assuming a circular molecule).
             read_cutoff (int or None, optional):  If not None, limits 
                 the parsing to the specified number of reads from the 
                 beginning of the FASTQ file. Default: None.
@@ -343,7 +345,8 @@ class UnknownRegionParser:
         c = 0
         h = 0
         for title, seq, qual in mp.fastx_read(fastq_file):
-            seq = reorient_circular_read(seq, self.refSeq[:200])
+            if reorient_reads:
+                seq = reorient_circular_read(seq, self.refSeq[:200])
             hits = list(a.map(seq))
             if len(hits) > 0:
                 hit = hits[0]
@@ -451,7 +454,7 @@ def parse_by_regex(construct, fastq_file, outfile='return', logfile='auto', cons
             with open(outfile.replace('.csv', '_log.json'), 'w') as logout:
                 json.dump(vars(urp), logout, cls=customJSONEncoder, indent=4)
 
-def parse_by_alignment(construct, fastq_file, outfile='return', logfile='auto', construct_is_file=False, autodetect_barcodes=False, unknown_lens=None, read_cutoff=None):
+def parse_by_alignment(construct, fastq_file, outfile='return', logfile='auto', construct_is_file=False, autodetect_barcodes=False, unknown_lens=None, reorient_reads=True, read_cutoff=None):
     """
     Parses a FASTQ file and extracts sequences from unknown regions using alignment.
 
@@ -487,6 +490,9 @@ def parse_by_alignment(construct, fastq_file, outfile='return', logfile='auto', 
                 lengths during parsing. 
             - list of str: A list of unknown region names to treat as 
                 having unknown lengths.
+        reorient_reads (bool, optional): If True (default), reorient 
+            and reindex reads to start at the start of the construct 
+            sequence (assuming a circular molecule).
         read_cutoff (int or None, optional): If not None, limits the parsing 
             to the specified number of reads. Default: None.
 
@@ -501,7 +507,7 @@ def parse_by_alignment(construct, fastq_file, outfile='return', logfile='auto', 
         autodetect_barcodes=autodetect_barcodes, 
         unknown_lens=unknown_lens
         )
-    result = urp.parse_fastq_alignment(fastq_file, read_cutoff=read_cutoff)
+    result = urp.parse_fastq_alignment(fastq_file, reorient_reads=reorient_reads, read_cutoff=read_cutoff)
     if outfile == 'return':
         return result
     else:
