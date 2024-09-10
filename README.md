@@ -3,9 +3,9 @@
 This is a collection of scripts meant to be useful for processing sequencing data with random barcodes or other variable regions. I've tried to make the tools somewhat modular so that if you have some python experience you can jump in and out, copy and paste and use what you need. Maybe at some point I will package it up more nicely, for now I am still working on making it usable for myself and others. 
 
 Specific dependencies:
-(regex)[https://pypi.org/project/regex/] (not the built in module)
-(Levenshtein)[https://pypi.org/project/python-Levenshtein/]
-(mappy)[https://pypi.org/project/mappy/]
+- [regex](https://pypi.org/project/regex/) (not the built-in module)
+- [Levenshtein](https://pypi.org/project/python-Levenshtein/)
+- [mappy](https://pypi.org/project/mappy/)
 
 Common dependencies: pandas, numpy, scipy
 
