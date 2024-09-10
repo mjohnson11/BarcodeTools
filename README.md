@@ -1,6 +1,6 @@
 # BarcodeTools
 
-This is a collection of scripts meant to be useful for processing sequencing data with random barcodes or other variable regions. I've tried to make the tools somewhat modular so that if you have some python experience you can jump in and out, copy and paste and use what you need. Maybe at some point I will package it up more nicely! For now, here is a breakdown of the files:
+This is a collection of scripts meant to be useful for processing sequencing data with random barcodes or other variable regions. I've tried to make the tools somewhat modular so that if you have some python experience you can jump in and out, copy and paste and use what you need. Maybe at some point I will package it up more nicely, for now I am still working on making it usable for myself and others. Here is a breakdown of the files:
 
 #### UnknownRegionParser.py
 This contains a class for parsing fastq files and extracting unknown regions. Extraction can be done using regex or alignment (using minimap2 via mappy). The alignment approach currently works best for medium (150 bp) to long reads, and I haven't tested it extensively. In both cases, the idea is that you provide a "construct" sequence to the parser, and then give it a fastq file to parse. It can detect regions in the construct with N/S/W bases automatically, but I have been generally giving it a formatted construct sequence, e.g.
