@@ -91,6 +91,7 @@ This script parses FASTQ files and extracts sequences from unknown regions withi
         - None (default): Use the actual lengths of the unknown regions defined in `construct`.
         - 'All': Treat all unknown regions as having unknown lengths during parsing. 
         - list of str: A list of unknown region names to treat as having unknown lengths.
+     - `reorient_reads (bool, optional)`: If True (default), reorient and reindex reads to start at the start of the construct sequence (assuming a circular molecule). This option uses the first 200 bases of the construct sequence to reindex.
      - `read_cutoff (int or None, optional)`: If not None, limits the parsing to the specified number of reads. Default: None.
    - **Returns:**
      - `pd.DataFrame or None`: If `outfile` is 'return', returns the parsed DataFrame. Otherwise, returns None and saves the DataFrame to the specified file. 

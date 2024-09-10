@@ -327,7 +327,10 @@ class UnknownRegionParser:
                 processed before printing a progress message. 
                 Default: 100000.
             reorient_reads (bool, optional): If True (default),
-                reorient and reindex reads to start at the start of the construct sequence (assuming a circular molecule).
+                reorient and reindex reads to start at the start of the 
+                construct sequence (assuming a circular molecule). This 
+                option uses the first 200 bases of the construct 
+                sequence to reindex.
             read_cutoff (int or None, optional):  If not None, limits 
                 the parsing to the specified number of reads from the 
                 beginning of the FASTQ file. Default: None.
@@ -492,7 +495,8 @@ def parse_by_alignment(construct, fastq_file, outfile='return', logfile='auto', 
                 having unknown lengths.
         reorient_reads (bool, optional): If True (default), reorient 
             and reindex reads to start at the start of the construct 
-            sequence (assuming a circular molecule).
+            sequence (assuming a circular molecule). This option uses 
+            the first 200 bases of the construct sequence to reindex.
         read_cutoff (int or None, optional): If not None, limits the parsing 
             to the specified number of reads. Default: None.
 
