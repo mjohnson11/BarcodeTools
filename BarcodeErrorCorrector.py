@@ -33,7 +33,7 @@ def record_run_stats(td, tmp, b, count_col, info_dict):
     info_dict[b]['nExcludedError'] = len(excluded[excluded[b+'_corrected']=='excluded error'])
     info_dict[b]['readsExcludedError'] = np.sum(excluded[excluded[b+'_corrected']=='excluded error'][count_col])
 
-def error_correct_file_or_df(fileOrDf, outfile='return', logfile='auto', remove_off_bases=True, bc_cols='infer', count_col='Count', all_count_cols='infer', min_counts_for_centroid=2, max_edits=3, poisson_error_rate=0.1, do_not_correct=[]):
+def error_correct_file_or_df(fileOrDf, outfile='return', logfile='auto', remove_off_bases=True, bc_cols='infer', count_col='Count', all_count_cols='infer', min_counts_for_centroid=2, max_edits=3, poisson_error_rate=0.1, do_not_correct=[], export_corrected_df=None):
     """
     Corrects errors in barcode columns of a CSV file or pandas DataFrame.
 
@@ -96,6 +96,9 @@ def error_correct_file_or_df(fileOrDf, outfile='return', logfile='auto', remove_
                   specific error rates.
         do_not_correct (list, optional): A list of barcode column names 
             to exclude from error correction (default: []).
+        export_corrected_df (str, optional): If provided, this is the output
+            file name for the dataframe with the original uncorrected columns
+            still present (default: None).
 
     Returns:
         pd.DataFrame or None:  If `outfile` is set to 'return', the function 
@@ -143,7 +146,10 @@ def error_correct_file_or_df(fileOrDf, outfile='return', logfile='auto', remove_
         td[b+'_corrected'] = td[b].map(corrector)
         record_run_stats(td, tmp, b, count_col, run_info['stats'])
 
+    
     corr_cols = [b if b in do_not_correct else b+'_corrected' for b in bc_cols]
+    if export_corrected_df:
+        td[bc_cols+corr_cols+all_count_cols].to_csv(export_corrected_df, index=False)
     final_df = td[corr_cols+all_count_cols].groupby(corr_cols).sum().reset_index().sort_values(by=count_col, ascending=False)
     if outfile == 'return':
         return final_df
