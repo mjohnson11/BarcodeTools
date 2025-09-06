@@ -9,7 +9,7 @@ Specific dependencies:
 
 Common dependencies: pandas, numpy, scipy
 
-Here is a breakdown of the files:
+OK, here is a breakdown of the files:
 
 #### UnknownRegionParser.py
 This contains a class for parsing fastq files and extracting unknown regions. Extraction can be done using regex or alignment (using minimap2 via mappy). The alignment approach currently works best for medium (150 bp) to long reads, and I haven't tested it extensively. In both cases, the idea is that you provide a "construct" sequence to the parser, and then give it a fastq file to parse. It can detect regions in the construct with N/S/W bases automatically, but I have been generally giving it a formatted construct sequence, e.g.
