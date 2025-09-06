@@ -4,8 +4,8 @@ import re
 import numpy as np
 import pandas as pd
 
-from DeletionCorrect import correct_bc_errors
-from util import customJSONEncoder
+from .DeletionCorrect import correct_bc_errors
+from .util import customJSONEncoder
 
 
 def dictify_param(p, cols):

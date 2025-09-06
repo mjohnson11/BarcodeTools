@@ -5,7 +5,7 @@ import json
 import pandas as pd
 import Levenshtein
 
-from UnknownRegionParser import parse_by_regex
+from .UnknownRegionParser import parse_by_regex
 
 
 def make_dir(dir_path):

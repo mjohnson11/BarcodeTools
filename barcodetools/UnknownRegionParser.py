@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import regex
 
-from util import (
+from .util import (
     FourLineFastq,
     cigar_to_ref_array,
     color_dna,
@@ -176,18 +176,15 @@ class UnknownRegionParser:
         for u in self.unknown_regions:
             s = u['search_start']
             e = u['search_end']
-            if np.mean(np.frombuffer(qual[s:e].encode('ascii'), dtype=np.uint8))-33 < self.quality_cutoff:
-                set_chars(hit_string, u['start'], 'QualityFail')
-            else:
-                regex_worked = False
-                for regex_pattern in u['regexes']:
-                    reghit = regex_pattern.search(seq[s:e])
-                    if reghit:
-                        regex_worked = True
-                        set_chars(hit_string, reghit.start()+s+len(reghit.group(1)), reghit.group(2))
-                        break
-                if not regex_worked:
-                    set_chars(hit_string, u['start'], 'RegexFail')
+            regex_worked = False
+            for regex_pattern in u['regexes']:
+                reghit = regex_pattern.search(seq[s:e])
+                if reghit:
+                    regex_worked = True
+                    set_chars(hit_string, reghit.start()+s+len(reghit.group(1)), reghit.group(2))
+                    break
+            if not regex_worked:
+                set_chars(hit_string, u['start'], 'RegexFail')
                 
         print(color_dna('\n'.join([self.refSeq, seq, ''.join(hit_string)])))
 

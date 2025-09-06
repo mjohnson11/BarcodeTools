@@ -1,0 +1,22 @@
+[project]
+    name = "barcodetools"
+    version = "0.1.0"
+    authors = [
+      { name="Milo Johnson", email="milo.s.johnson.13@gmail.com" }
+    ]
+    description = "A collection of tools for barcode manipulation and analysis." 
+    readme = "README.md"
+    requires-python = ">=3.8"
+    dependencies = [
+        "numpy",
+        "regex",
+        "mappy",
+        "pandas",
+        "python-Levenshtein", # This is the common package name for Levenshtein
+        "scipy",
+    ]
+    [project.urls]
+    "Homepage" = "https://github.com/mjohnson11/BarcodeTools" 
+    [build-system]
+    requires = ["setuptools"]
+    build-backend = "setuptools.build_meta"

@@ -3,7 +3,7 @@ from collections import defaultdict, Counter
 import pandas as pd
 import numpy as np
 
-from BarcodeErrorCorrector import error_correct_file_or_df
+from .BarcodeErrorCorrector import error_correct_file_or_df
 
 def merge_and_correct_batch(
     batchfile,
@@ -61,16 +61,18 @@ def merge_and_correct_batch(
     samples = []
     for j, row in bf.iterrows():
         s = row['Sample']
-        samples.append(s)
+        print(s)
         out = outdir+'/'+s
         fname = out+'/'+s+'_index_filtered.csv' if filtered else out+'/'+s+'_counts.csv'
         td = pd.read_csv(fname)
-        # (These columns have to be the same in all files)
-        unknown_cols = [i for i in td if i!='Count']
-        td['Combined'] = td.apply(lambda row: '_'.join([row[c] for c in unknown_cols]), axis=1)
-        assert len(td) == len(set(td['Combined'])) # There should be no repeat unknown region combos
-        for comb, count in np.array(td[['Combined', 'Count']]):
-            comb_counts[comb][s] = count
+        if len(td) > 0: # Excluding files with no reads
+            samples.append(s)
+            # (These columns have to be the same in all files)
+            unknown_cols = [i for i in td if i!='Count']
+            td['Combined'] = td.apply(lambda row: '_'.join([row[c] for c in unknown_cols]), axis=1)
+            assert len(td) == len(set(td['Combined'])) # There should be no repeat unknown region combos
+            for comb, count in np.array(td[['Combined', 'Count']]):
+                comb_counts[comb][s] = count
             
     mat = []
     for comb in comb_counts:
