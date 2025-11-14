@@ -160,7 +160,7 @@ class UnknownRegionParser:
                     regex.compile(c1+'{e<=1}'+bc_2off+c2+'{e<=1}'),
                 ]
         
-    def regex_example(self, seq, qual):
+    def regex_example(self, seq, qual, quality_thresh, broad_search):
         # makes a nice-to-look at regex hit display for testing
         
         def set_chars(char_array, position, string):
@@ -174,8 +174,19 @@ class UnknownRegionParser:
         
         hit_string = [' '] * len(self.refSeq)
         for u in self.unknown_regions:
-            s = u['search_start']
-            e = u['search_end']
+            if broad_search:
+                # this is for a very broad search of both the read and the reverse complement
+                # (suitable for nanopore whole plasmid seq for example, although alignment parsing may be best)
+                seq = seq + '_' + rc(seq)
+                s = 0
+                e = len(seq)
+            else:
+                s = u['search_start']
+                e = u['search_end']
+                if np.mean(np.frombuffer(qual[s:e].encode('ascii'), dtype=np.uint8))-33 < quality_thresh:
+                    set_chars(hit_string, u['start'], 'QualityFail')
+                    continue
+              
             regex_worked = False
             for regex_pattern in u['regexes']:
                 reghit = regex_pattern.search(seq[s:e])
@@ -185,10 +196,11 @@ class UnknownRegionParser:
                     break
             if not regex_worked:
                 set_chars(hit_string, u['start'], 'RegexFail')
-                
-        print(color_dna('\n'.join([self.refSeq, seq, ''.join(hit_string)])))
+        
+        use_seq = ''.join([seq[i].lower() if len(self.refSeq)>i and seq[i]==self.refSeq[i] else seq[i] for i in range(len(seq))])        
+        print(color_dna('\n'.join([self.refSeq, use_seq, ''.join(hit_string)])))
 
-    def test_regex(self, fastq_file, trim_read_start=False, read_lim=10, tail_from=1000):
+    def test_regex(self, fastq_file, trim_read_start=False, read_lim=10, tail_from=1000, quality_thresh=False, broad_search=False):
         """
         Looks at the last 10 reads of the first 1000 reads
         or the last 10 reads if there are < 1000.
@@ -212,9 +224,10 @@ class UnknownRegionParser:
                     break
         for title, seq, qual in recs[-1*read_lim:]:
             print(title)
-            self.regex_example(seq, qual)
+            
+            self.regex_example(seq, qual, quality_thresh, broad_search)
 
-    def regex_parse(self, seq, qual, u, quality_thresh):
+    def regex_parse(self, title, seq, qual, u, quality_thresh, broad_search, write_failures):
         """
         Applies regular expressions to extract the sequence from a single unknown region.
         
@@ -233,18 +246,29 @@ class UnknownRegionParser:
                  is found and passes quality filtering.  Otherwise, returns
                  'QualityFail' or 'RegexFail'.
         """
-        s = u['search_start']
-        e = u['search_end']
-        # if quality_thresh if False, we skip this step, which greatly improves speed
-        if quality_thresh and np.mean(np.frombuffer(qual[s:e].encode('ascii'), dtype=np.uint8))-33 < quality_thresh:
-            return 'QualityFail'
+        if broad_search:
+            # this is for a very broad search of both the read and the reverse complement
+            # (suitable for nanopore whole plasmid seq for example, although alignment parsing may be best)
+            use_seq = seq + '_' + rc(seq)
+            s = 0
+            e = len(use_seq)
+        else:
+            use_seq = seq
+            s = u['search_start']
+            e = u['search_end']
+            # if quality_thresh if False, we skip this step, which greatly improves speed
+            if quality_thresh and np.mean(np.frombuffer(qual[s:e].encode('ascii'), dtype=np.uint8))-33 < quality_thresh:
+                return 'QualityFail'
         for regex_pattern in u['regexes']:
-            reghit = regex_pattern.search(seq[s:e])
+            reghit = regex_pattern.search(use_seq[s:e])
             if reghit:
                 return reghit.group(2)
+        # recording failures if needed
+        if write_failures and len(self.failures[u['name']]) < 1000:
+          self.failures[u['name']].append([title, seq, '+', qual])
         return 'RegexFail'
         
-    def parse_fastq_regex(self, fastq_file, trim_read_start=False, quality_thresh=False, progress_read_count=100000, read_cutoff=None):
+    def parse_fastq_regex(self, fastq_file, trim_read_start=False, quality_thresh=False, progress_read_count=100000, read_cutoff=None, broad_search=False, write_failures=False):
         """
         Parses a FASTQ file and extracts sequences from unknown regions using regular expressions. 
 
@@ -262,6 +286,12 @@ class UnknownRegionParser:
             read_cutoff (int or None, optional): If not None, limits the parsing 
                 to the specified number of reads from the beginning of the 
                 FASTQ file. Default: None.
+            write_failures (bool, optional): If true, will write the first 1000
+                reads where regex couldn't match one of the unknown regions.
+                Default: False
+            broad_search (bool, optional): If true, will search for the regex pattern
+                across the entire read and the reverse complement. Suitable for quick-
+                and-dirty nanopore parsing
 
         Returns:
             pd.DataFrame: A DataFrame summarizing the parsed results. Columns 
@@ -270,6 +300,8 @@ class UnknownRegionParser:
                 the unknown regions and their observed frequency.
         """
         print('Parsing', fastq_file)
+        if write_failures:
+            self.failures = {u['name']: [] for u in self.unknown_regions}
         self.create_regex_lists()
         if fastq_file.endswith(".gz"):
             opener = gzip.open
@@ -282,7 +314,7 @@ class UnknownRegionParser:
                 if trim_read_start:
                     seq = seq[trim_read_start:]
                     qual = qual[trim_read_start:]
-                result = '_'.join([self.regex_parse(seq, qual, u, quality_thresh) for u in self.unknown_regions])
+                result = '_'.join([self.regex_parse(title, seq, qual, u, quality_thresh, broad_search, write_failures) for u in self.unknown_regions])
                 bc_counter[result] += 1
                 c += 1
                 if read_cutoff and c >= read_cutoff:
@@ -295,13 +327,14 @@ class UnknownRegionParser:
         names = [u['name'] for u in self.unknown_regions]
         td = pd.DataFrame(mat, columns=names+['Count']).sort_values(by='Count', ascending=False)
         for col in names:
-            lens = td[col].apply(len)
+            tmp = td[~td[col].isin(['RegexFail', 'QualityFail'])]
+            lens = tmp[col].apply(len)
             lend = dict(lens.value_counts())
             self.stats[col] = {
-                'nUnique': len(set(td[col])), 
+                'nUnique': len(set(tmp[col])), 
                 # have to cast to int here to avoid a  json serializing bug
                 'lenCounts': {int(i): lend[i] for i in lend},
-                'lenReads': {int(i[0]):i[1] for i in np.array(td[[col, 'Count']].groupby(lens).sum(numeric_only=True).reset_index())},
+                'lenReads': {int(i[0]):i[1] for i in np.array(tmp[[col, 'Count']].groupby(lens).sum(numeric_only=True).reset_index())},
             }
             for fail in ['RegexFail', 'QualityFail']:
                 if fail in set(td[col]):
@@ -376,7 +409,7 @@ class UnknownRegionParser:
             }
         return td
 
-def parse_by_regex(construct, fastq_file, outfile='return', logfile='auto', construct_is_file=False, autodetect_barcodes=False, regex_flanking_len=8, unknown_lens=None, trim_read_start=False, quality_thresh=False, read_cutoff=None):
+def parse_by_regex(construct, fastq_file, outfile='return', logfile='auto', construct_is_file=False, autodetect_barcodes=False, regex_flanking_len=8, unknown_lens=None, trim_read_start=False, quality_thresh=False, read_cutoff=None, write_failures=False, broad_search=False):
     """
     Parses a FASTQ file and extracts sequences from unknown regions using regular expressions.
 
@@ -425,6 +458,12 @@ def parse_by_regex(construct, fastq_file, outfile='return', logfile='auto', cons
             False, quality filtering is skipped. Default: False.
         read_cutoff (int or None, optional): If not None, limits the parsing 
             to the specified number of reads. Default: None.
+        write_failures (bool, optional): If true, will write the first 1000
+            reads where regex couldn't match one of the unknown regions.
+            Default: False
+        broad_search (bool, optional): If true, will search for the regex pattern
+            across the entire read and the reverse complement. Suitable for quick-
+            and-dirty nanopore parsing
 
     Returns:
         pd.DataFrame or None: If `outfile` is 'return', returns the parsed 
@@ -442,17 +481,26 @@ def parse_by_regex(construct, fastq_file, outfile='return', logfile='auto', cons
         fastq_file,
         quality_thresh=quality_thresh,
         trim_read_start=trim_read_start, 
-        read_cutoff=read_cutoff
+        read_cutoff=read_cutoff,
+        write_failures=write_failures,
+        broad_search=broad_search
         )
     if outfile == 'return':
         return result
     else:
         result.to_csv(outfile, index=False)
+        if write_failures:
+            for u in urp.unknown_regions:
+                with open(outfile.replace('.csv', '_'+u['name']+'_regex_fail_examples.fastq'), 'w') as outbuffer:
+                    outbuffer.write('\n'.join(['\n'.join(rec) for rec in urp.failures[u['name']]]))
         if logfile == 'auto':
             print('Log:', outfile.replace('.csv', '_log.json'))
             assert '.csv' in outfile
             with open(outfile.replace('.csv', '_log.json'), 'w') as logout:
-                json.dump(vars(urp), logout, cls=customJSONEncoder, indent=4)
+                urp_dict = vars(urp).copy()
+                if 'failures' in urp_dict:
+                  del urp_dict['failures']
+                json.dump(urp_dict, logout, cls=customJSONEncoder, indent=4)
 
 def parse_by_alignment(construct, fastq_file, outfile='return', logfile='auto', construct_is_file=False, autodetect_barcodes=False, unknown_lens=None, reorient_reads=True, read_cutoff=None):
     """
