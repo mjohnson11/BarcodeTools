@@ -110,11 +110,12 @@ def error_correct_file_or_df(fileOrDf, outfile='return', logfile='auto', remove_
         td = fileOrDf.copy(deep=True)
     else:
         td = pd.read_csv(fileOrDf)
-    if bc_cols == 'infer':
-        bc_cols = [i for i in td if td[i].dtype==object]
         
+    if bc_cols == 'infer':
+        bc_cols = td.select_dtypes(include=['object', 'category']).columns.tolist()
+
     if all_count_cols == 'infer':
-        all_count_cols = [i for i in td if td[i].dtype in (int, float, 'int64', 'float64')]
+        all_count_cols = td.select_dtypes(include=[np.number]).columns.tolist()
         
     min_counts_for_centroid = dictify_param(min_counts_for_centroid, bc_cols) 
     max_edits = dictify_param(max_edits, bc_cols) 
