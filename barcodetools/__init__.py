@@ -2,7 +2,6 @@ from . import BarcodeErrorCorrector
 from . import BatchRegexParser
 from . import BowtieColumnAlign
 from . import DeletionCorrect
-from . import json_combiner
 from . import MergeAndCorrect
 from . import QuickColumnAlign
 from . import UnknownRegionParser
