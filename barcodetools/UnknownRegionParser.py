@@ -142,7 +142,7 @@ class UnknownRegionParser:
             c1 = '('+unknown['flanking_seq_left']+')'
             c2 = '('+unknown['flanking_seq_right']+')'
             if unknown['len'] == 'unknown_len':
-                bc_reg = '(.*?)'
+                bc_reg = '(.*)'
                 unknown['regexes'] = [
                     regex.compile(c1+bc_reg+c2),
                     regex.compile(c1+'{e<=1}'+bc_reg+c2+'{e<=1}'),
